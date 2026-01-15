@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ライフゴールタイマー Ver 0.4</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Zen+Kaku+Gothic+New:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            /* 明るいブルーの背景 */
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            color: #1e3a8a; /* 濃い青文字 */
+            overflow-x: hidden;
+            overflow-y: auto;
+            min-height: 100vh;
+        }
+
+        /* スクロールバー装飾 (青系) */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #e0f2fe; }
+        ::-webkit-scrollbar-thumb { background: #60a5fa; border-radius: 4px; }
+
+        .timer-font {
+            font-family: 'Share Tech Mono', monospace;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        /* === 歯車アニメーション (青系) === */
+        @keyframes spin-cw { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(360deg); } }
+        @keyframes spin-ccw { 0% { transform: translate(-50%, -50%) rotate(360deg); } 100% { transform: translate(-50%, -50%) rotate(0deg); } }
+        
+        .gear-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            pointer-events: none;
+            z-index: -1;
+            opacity: 0.4; /* 明るい背景なので少し濃く */
+            transition: opacity 1s;
+        }
+        
+        .gear-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            border-radius: 50%;
+            border: 1px solid rgba(59, 130, 246, 0.3); /* 青い線 */
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.1);
+        }
+
+        .gear-1 { width: 600px; height: 600px; border-style: dashed; animation: spin-cw 80s linear infinite; }
+        .gear-2 { width: 500px; height: 500px; border-width: 2px; border-left-color: transparent; border-right-color: transparent; animation: spin-ccw 60s linear infinite; }
+        .gear-3 { width: 800px; height: 800px; border: 1px dotted rgba(14, 165, 233, 0.3); animation: spin-cw 140s linear infinite; }
+        
+        .gear-teeth {
+            background: repeating-conic-gradient(from 0deg, rgba(59, 130, 246, 0.1) 0deg 5deg, transparent 5deg 15deg);
+            width: 700px; height: 700px;
+            position: absolute; top: 50%; left: 50%;
+            border-radius: 50%;
+            animation: spin-ccw 100s linear infinite;
+            mask-image: radial-gradient(transparent 60%, black 65%);
+            -webkit-mask-image: radial-gradient(transparent 60%, black 65%);
+        }
+
+        /* === 輝き・パルスアニメーション (青) === */
+        @keyframes shine-pulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(14, 165, 233, 0.2), inset 0 0 20px rgba(14, 165, 233, 0.1); border-color: rgba(56, 189, 248, 0.5); }
+            50% { box-shadow: 0 0 50px rgba(14, 165, 233, 0.6), inset 0 0 40px rgba(14, 165, 233, 0.3); border-color: rgba(56, 189, 248, 1); }
+        }
+        .shine-border { animation: shine-pulse 3s infinite ease-in-out; }
+
+        /* === コア（エナジー） === */
+        .core-glow {
+            width: 12px; height: 12px;
+            background: #0ea5e9; /* Sky Blue */
+            border-radius: 50%;
+            box-shadow: 0 0 15px #0ea5e9, 0 0 30px #38bdf8;
+            animation: energy-pulse 2s infinite ease-in-out;
+            margin: 0 auto 20px auto;
+        }
+        @keyframes energy-pulse {
+            0% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 15px #0ea5e9; }
+            50% { transform: scale(1.4); opacity: 1; box-shadow: 0 0 40px #38bdf8, 0 0 60px #bae6fd; }
+            100% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 15px #0ea5e9; }
+        }
+
+        .label-text {
+            font-size: 0.65rem; color: #2563eb; /* Blue-600 */
+            letter-spacing: 0.1em; margin-top: -0.2rem; display: block;
+            font-weight: bold;
+        }
+
+        /* フェードイン */
+        .fade-in { animation: fadeIn 1s ease-in forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 名言のスタイル */
+        .quote-text { font-family: 'Zen Kaku Gothic New', serif; }
+
+        @media (max-width: 640px) {
+            .gear-1 { width: 300px; height: 300px; }
+            .gear-2 { width: 250px; height: 250px; }
+            .gear-3 { width: 400px; height: 400px; }
+            .gear-teeth { width: 350px; height: 350px; }
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+
+    <!-- 背景の歯車 -->
+    <div class="gear-container">
+        <div class="gear-ring gear-1"></div>
+        <div class="gear-ring gear-2"></div>
+        <div class="gear-ring gear-3"></div>
+        <div class="gear-teeth"></div>
+    </div>
+
+    <!-- 入力エリア -->
+    <div id="inputSection" class="w-full max-w-lg bg-white/70 backdrop-blur-xl rounded-3xl border border-white/50 shadow-xl p-8 relative z-10 fade-in">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500 tracking-widest mb-2">ライフゴールタイマー</h1>
+            <p class="text-blue-600 font-bold text-sm tracking-widest mb-1">入力した瞬間にあなたの時間軸が輝きます</p>
+            <p class="text-gray-400 text-[10px] tracking-wider">Ver 0.4 - Blue Edition</p>
+        </div>
+
+        <div class="space-y-5">
+            <div>
+                <label class="block text-xs font-bold text-blue-800 mb-1 tracking-wider">NAME</label>
+                <input type="text" id="userName" placeholder="まさる" class="w-full bg-white/50 border border-blue-200 rounded-lg px-4 py-3 text-blue-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition placeholder-blue-300">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-blue-800 mb-1 tracking-wider">BIRTH DATE</label>
+                <input type="date" id="birthDate" class="w-full bg-white/50 border border-blue-200 rounded-lg px-4 py-3 text-blue-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-blue-800 mb-1 tracking-wider">GOAL AGE</label>
+                <div class="flex items-center">
+                    <input type="number" id="targetAge" placeholder="80" class="w-full bg-white/50 border border-blue-200 rounded-lg px-4 py-3 text-blue-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition placeholder-blue-300">
+                    <span class="ml-3 text-blue-800 font-bold text-sm">歳</span>
+                </div>
+            </div>
+            
+            <!-- サウンド設定 -->
+            <div class="flex items-center justify-between bg-blue-50/50 p-3 rounded-lg border border-blue-100">
+                <span class="text-xs text-blue-600 font-medium">鼓動音 (Audio)</span>
+                <label class="inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="soundToggle" class="sr-only peer">
+                    <div class="relative w-9 h-5 bg-blue-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div>
+                </label>
+            </div>
+
+            <button onclick="startTimer()" class="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-500/30 transform active:scale-[0.98] transition duration-200 uppercase tracking-widest mt-4">
+                輝きを灯す (INITIATE)
+            </button>
+            
+            <p class="text-[10px] text-center text-blue-400 mt-2">* 入力データは自動保存されます</p>
+        </div>
+    </div>
+
+    <!-- タイマー表示エリア (最初は非表示) -->
+    <div id="timerSection" class="hidden w-full max-w-6xl relative z-10 fade-in pb-10">
+        
+        <!-- コントロールバー (右上) -->
+        <div class="absolute top-0 right-0 flex gap-4 -mt-10 mb-4 md:mt-0 md:mb-0">
+            <button onclick="toggleFullScreen()" class="text-blue-700/70 hover:text-blue-900 text-xs tracking-widest uppercase transition-colors flex items-center gap-1 font-bold">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 4l-5-5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                FULL
+            </button>
+        </div>
+
+        <!-- メインパネル -->
+        <div class="bg-white/60 backdrop-blur-md border border-white/80 rounded-3xl p-6 md:p-10 text-center shine-border relative shadow-2xl">
+            
+            <h2 class="text-blue-500 tracking-[0.4em] text-[10px] md:text-xs mb-8 uppercase font-bold">Time Remaining to Goal</h2>
+
+            <!-- コア -->
+            <div class="core-glow"></div>
+
+            <!-- カウントダウン表示 -->
+            <div class="timer-font tabular-nums text-slate-800 relative z-30 mb-10">
+                <!-- 年・日 -->
+                <div class="flex justify-center gap-8 md:gap-16 mb-6 opacity-70 hover:opacity-100 transition-opacity duration-500">
+                    <div class="text-center">
+                        <span id="years" class="text-2xl md:text-5xl font-bold block text-blue-900">0</span>
+                        <span class="label-text">YEARS</span>
+                    </div>
+                    <div class="text-center">
+                        <span id="days" class="text-2xl md:text-5xl font-bold block text-blue-900">0</span>
+                        <span class="label-text">DAYS</span>
+                    </div>
+                </div>
+
+                <!-- 時間・分・秒・コンマ -->
+                <div class="flex flex-wrap justify-center items-end gap-1 md:gap-3 text-cyan-600">
+                    <div class="text-center"><span id="hours" class="text-4xl md:text-8xl font-bold leading-none">00</span><span class="label-text">HOURS</span></div>
+                    <span class="text-2xl md:text-6xl self-center pb-2 md:pb-6 text-blue-300">:</span>
+                    <div class="text-center"><span id="minutes" class="text-4xl md:text-8xl font-bold leading-none">00</span><span class="label-text">MIN</span></div>
+                    <span class="text-2xl md:text-6xl self-center pb-2 md:pb-6 text-blue-300">:</span>
+                    <div class="text-center"><span id="seconds" class="text-4xl md:text-8xl font-bold leading-none">00</span><span class="label-text">SEC</span></div>
+                    <span class="text-2xl md:text-6xl self-center pb-2 md:pb-6 text-blue-300">.</span>
+                    <div class="text-center"><span id="milliseconds" class="text-5xl md:text-9xl font-bold leading-none text-blue-600 w-[110px] md:w-[220px] inline-block text-left">00</span><span class="label-text text-left pl-1">MS</span></div>
+                </div>
+            </div>
+
+            <!-- メッセージ & 統計 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 text-left mt-8">
+                
+                <!-- 左側：メッセージと名言 -->
+                <div class="bg-blue-50/50 border-l-4 border-blue-400 p-6 rounded-r-xl">
+                    <p id="mainMessage" class="text-slate-700 text-sm leading-relaxed font-bold mb-6">
+                        <!-- JSで挿入 -->
+                    </p>
+                    <div class="mt-4 pt-4 border-t border-blue-200">
+                        <p class="text-[10px] text-blue-400 mb-2 tracking-widest">QUOTE OF THE MOMENT</p>
+                        <p id="randomQuote" class="text-xs md:text-sm text-slate-600 italic quote-text font-medium">
+                            <!-- JSで名言挿入 -->
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 右側：残された回数 -->
+                <div class="space-y-3">
+                    <!-- 桜 -->
+                    <div class="flex justify-between items-center bg-white/50 px-4 py-3 rounded border border-blue-100 shadow-sm">
+                        <span class="text-xs text-pink-500 font-bold">🌸 桜を見る</span>
+                        <span class="text-lg font-bold text-blue-900"><span id="sakuraCount">0</span> <span class="text-[10px] text-slate-500">回</span></span>
+                    </div>
+                    
+                    <!-- 食事 -->
+                    <div class="bg-white/50 px-4 py-3 rounded border border-blue-100 shadow-sm">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs text-orange-500 font-bold">🍚 家族と食事</span>
+                            <select id="mealFrequency" onchange="updateEventCounts()" class="bg-transparent text-[10px] text-slate-500 border border-blue-200 rounded px-1 outline-none text-right focus:border-blue-400">
+                                <option value="2" selected>年2回</option>
+                                <option value="12">月1回</option>
+                                <option value="52">週1回</option>
+                            </select>
+                        </div>
+                        <div class="text-right text-lg font-bold text-blue-900"><span id="mealCount">0</span> <span class="text-[10px] text-slate-500">回</span></div>
+                    </div>
+
+                    <!-- 感謝 -->
+                    <div class="bg-white/50 px-4 py-3 rounded border border-blue-100 shadow-sm">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs text-indigo-500 font-bold">💌 感謝を伝える</span>
+                            <select id="thankFrequency" onchange="updateEventCounts()" class="bg-transparent text-[10px] text-slate-500 border border-blue-200 rounded px-1 outline-none text-right focus:border-blue-400">
+                                <option value="1" selected>年1回</option>
+                                <option value="12">月1回</option>
+                            </select>
+                        </div>
+                        <div class="text-right text-lg font-bold text-blue-900"><span id="thankCount">0</span> <span class="text-[10px] text-slate-500">回</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- フッターボタン -->
+            <div class="mt-12 flex justify-center gap-8">
+                <button onclick="resetTimer()" class="text-blue-400 hover:text-blue-600 text-[10px] tracking-[0.2em] uppercase transition-colors font-bold">
+                    Edit Settings
+                </button>
+                <button onclick="downloadPage()" class="text-blue-400 hover:text-blue-600 text-[10px] tracking-[0.2em] uppercase transition-colors font-bold">
+                    Save as HTML
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let intervalId;
+        let soundIntervalId;
+        let cachedRemainingYears = 0;
+        let audioCtx;
+        let isAudioEnabled = false;
+
+        // 名言リスト
+        const quotes = [
+            "あなたの時間は限られている。だから他人の人生を生きたりして無駄に過ごしてはいけない。 - Steve Jobs",
+            "人生は短いのではない。私たちがそれを短くしているのだ。 - Seneca",
+            "過去は変えられない。未来は変えられる。今、ここにある時間だけがあなたのものだ。",
+            "一日一生。今日という日は、残りの人生の最初の日である。",
+            "失われた時は、二度と戻らない。 - Benjamin Franklin",
+            "明日死ぬかのように生きよ。永遠に生きるかのように学べ。 - Mahatma Gandhi"
+        ];
+
+        // === ページ読み込み時に保存データをロード ===
+        window.onload = function() {
+            loadSettings();
+        };
+
+        // === 設定の保存と読み込み (localStorage) ===
+        function saveSettings() {
+            const settings = {
+                name: document.getElementById('userName').value,
+                birth: document.getElementById('birthDate').value,
+                target: document.getElementById('targetAge').value,
+                mealFreq: document.getElementById('mealFrequency').value,
+                thankFreq: document.getElementById('thankFrequency').value
+            };
+            localStorage.setItem('lifeTimerSettings', JSON.stringify(settings));
+        }
+
+        function loadSettings() {
+            const saved = localStorage.getItem('lifeTimerSettings');
+            if (saved) {
+                const settings = JSON.parse(saved);
+                if(settings.name) document.getElementById('userName').value = settings.name;
+                if(settings.birth) document.getElementById('birthDate').value = settings.birth;
+                if(settings.target) document.getElementById('targetAge').value = settings.target;
+                if(settings.mealFreq) document.getElementById('mealFrequency').value = settings.mealFreq;
+                if(settings.thankFreq) document.getElementById('thankFrequency').value = settings.thankFreq;
+            }
+        }
+
+        // === 音声生成ロジック (Web Audio API) ===
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+        }
+
+        function playHeartbeat() {
+            if (!isAudioEnabled || !audioCtx) return;
+            createKick(audioCtx.currentTime);
+            createKick(audioCtx.currentTime + 0.15, 0.7); 
+        }
+
+        function createKick(startTime, gainValue = 1.0) {
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(150, startTime);
+            osc.frequency.exponentialRampToValueAtTime(0.01, startTime + 0.5);
+            gainNode.gain.setValueAtTime(gainValue, startTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.5);
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            osc.start(startTime);
+            osc.stop(startTime + 0.5);
+        }
+
+        // === タイマー開始 ===
+        function startTimer() {
+            const userName = document.getElementById('userName').value || "あなた";
+            const birthDateInput = document.getElementById('birthDate').value;
+            const targetAgeInput = document.getElementById('targetAge').value;
+            isAudioEnabled = document.getElementById('soundToggle').checked;
+
+            if (!birthDateInput || !targetAgeInput) {
+                alert("生年月日と目標年齢を入力してください。");
+                return;
+            }
+
+            // 設定を保存
+            saveSettings();
+
+            // ランダム名言を表示
+            const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+            document.getElementById('randomQuote').innerText = randomQuote;
+
+            const birthDate = new Date(birthDateInput);
+            const targetAge = parseInt(targetAgeInput);
+            const endDate = new Date(birthDate);
+            endDate.setFullYear(birthDate.getFullYear() + targetAge);
+
+            if (isAudioEnabled) {
+                initAudio();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                clearInterval(soundIntervalId);
+                soundIntervalId = setInterval(playHeartbeat, 1500);
+            }
+
+            document.getElementById('inputSection').classList.add('hidden');
+            document.getElementById('timerSection').classList.remove('hidden');
+
+            clearInterval(intervalId);
+            intervalId = setInterval(() => {
+                updateTimer(userName, birthDate, endDate);
+            }, 10);
+            
+            updateTimer(userName, birthDate, endDate);
+        }
+
+        function updateTimer(userName, birthDate, endDate) {
+            const now = new Date();
+            const timeRemaining = endDate - now;
+
+            if (timeRemaining <= 0) {
+                clearInterval(intervalId);
+                clearInterval(soundIntervalId);
+                document.getElementById('milliseconds').innerText = "00";
+                return;
+            }
+
+            const years = Math.floor(timeRemaining / (1000 * 60 * 60 * 24 * 365.25));
+            const days = Math.floor((timeRemaining % (1000 * 60 * 60 * 24 * 365.25)) / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((timeRemaining % (1000 * 60)) / 1000);
+            const milliseconds = Math.floor((timeRemaining % 1000) / 10);
+
+            document.getElementById('years').innerText = years;
+            document.getElementById('days').innerText = days;
+            document.getElementById('hours').innerText = String(hours).padStart(2, '0');
+            document.getElementById('minutes').innerText = String(minutes).padStart(2, '0');
+            document.getElementById('seconds').innerText = String(seconds).padStart(2, '0');
+            document.getElementById('milliseconds').innerText = String(milliseconds).padStart(2, '0');
+
+            cachedRemainingYears = years + (days / 365);
+            
+            if (document.getElementById('sakuraCount').innerText === "0") {
+                updateEventCounts(userName);
+            }
+        }
+
+        function updateEventCounts(optionalName) {
+            const userName = optionalName || document.getElementById('userName').value || "あなた";
+            const sakuraCount = Math.floor(cachedRemainingYears);
+            const mealFrequency = parseFloat(document.getElementById('mealFrequency').value);
+            const mealCount = Math.floor(cachedRemainingYears * mealFrequency);
+            const thankFrequency = parseFloat(document.getElementById('thankFrequency').value);
+            const thankCount = Math.floor(cachedRemainingYears * thankFrequency);
+
+            document.getElementById('sakuraCount').innerText = sakuraCount;
+            document.getElementById('mealCount').innerText = mealCount;
+            document.getElementById('thankCount').innerText = thankCount;
+
+            const msgArea = document.getElementById('mainMessage');
+            msgArea.innerHTML = `
+                <span class="text-blue-600 text-lg font-bold">${userName}</span> さん。<br>
+                残された時間の中で、私たちは何を遺せるでしょうか。<br>
+                <br>
+                <span class="text-xs text-slate-500">家族との食事回数 (予測):</span> <span class="text-orange-500 font-bold">${mealCount}回</span><br>
+                <span class="text-xs text-slate-500">感謝を伝える機会 (予測):</span> <span class="text-indigo-500 font-bold">${thankCount}回</span>
+            `;
+        }
+
+        function resetTimer() {
+            clearInterval(intervalId);
+            clearInterval(soundIntervalId);
+            if(audioCtx) audioCtx.suspend();
+            document.getElementById('inputSection').classList.remove('hidden');
+            document.getElementById('timerSection').classList.add('hidden');
+            document.getElementById('sakuraCount').innerText = "0";
+        }
+
+        function downloadPage() {
+            const htmlContent = document.documentElement.outerHTML;
+            const blob = new Blob([htmlContent], { type: "text/html" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "index.html";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // === 全画面表示機能 ===
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    alert(`Error attempting to enable full-screen mode: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+    </script>
+</body>
+</html>
