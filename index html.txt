@@ -3,399 +3,474 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>モデル募集（秘）｜都内・千葉・高額報酬</title>
+    <title>Life Goal Timer Ver 0.3</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- React & Babel -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Zen+Kaku+Gothic+New:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
-        @keyframes spin-slow {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+        body {
+            font-family: 'Zen Kaku Gothic New', sans-serif;
+            background-color: #050505;
+            color: #e5e7eb;
+            overflow-x: hidden;
+            overflow-y: auto;
+            /* スクロールバー装飾 */
+            scrollbar-width: thin;
+            scrollbar-color: #333 #000;
         }
-        .animate-spin-slow {
-            animation: spin-slow 12s linear infinite;
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+
+        .timer-font {
+            font-family: 'Share Tech Mono', monospace;
+            font-variant-numeric: tabular-nums;
         }
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-15px); }
+        
+        /* === 歯車アニメーション === */
+        @keyframes spin-cw { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(360deg); } }
+        @keyframes spin-ccw { 0% { transform: translate(-50%, -50%) rotate(360deg); } 100% { transform: translate(-50%, -50%) rotate(0deg); } }
+        
+        .gear-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            pointer-events: none;
+            z-index: -1;
+            opacity: 0.2; /* 少し暗くして文字を見やすく */
+            transition: opacity 1s;
         }
-        .animate-float {
-            animation: float 4s ease-in-out infinite;
+        
+        .gear-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 50, 50, 0.2);
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.05);
         }
-        .noise-bg {
-            background-image: url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E");
+
+        .gear-1 { width: 600px; height: 600px; border-style: dashed; animation: spin-cw 80s linear infinite; }
+        .gear-2 { width: 500px; height: 500px; border-width: 2px; border-left-color: transparent; border-right-color: transparent; animation: spin-ccw 60s linear infinite; }
+        .gear-3 { width: 800px; height: 800px; border: 1px dotted rgba(255, 100, 100, 0.1); animation: spin-cw 140s linear infinite; }
+        
+        .gear-teeth {
+            background: repeating-conic-gradient(from 0deg, rgba(255, 0, 0, 0.08) 0deg 5deg, transparent 5deg 15deg);
+            width: 700px; height: 700px;
+            position: absolute; top: 50%; left: 50%;
+            border-radius: 50%;
+            animation: spin-ccw 100s linear infinite;
+            mask-image: radial-gradient(transparent 60%, black 65%);
+            -webkit-mask-image: radial-gradient(transparent 60%, black 65%);
         }
-        .font-mincho {
-            font-family: "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", "HGSMinchoE", "MS PMincho", "MS Mincho", serif;
+
+        /* === 警告・点滅アニメーション === */
+        @keyframes warning-pulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(220, 38, 38, 0.1), inset 0 0 20px rgba(220, 38, 38, 0.05); border-color: rgba(185, 28, 28, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(220, 38, 38, 0.3), inset 0 0 40px rgba(220, 38, 38, 0.1); border-color: rgba(220, 38, 38, 0.6); }
+        }
+        .warning-border { animation: warning-pulse 3s infinite ease-in-out; }
+
+        /* === コア（心臓） === */
+        .core-glow {
+            width: 12px; height: 12px;
+            background: #ff3333;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000;
+            animation: heartbeat 1.5s infinite ease-in-out;
+            margin: 0 auto 20px auto;
+        }
+        @keyframes heartbeat {
+            0% { transform: scale(1); opacity: 0.6; }
+            10% { transform: scale(1.3); opacity: 1; box-shadow: 0 0 30px #ff0000; }
+            20% { transform: scale(1); opacity: 0.6; }
+            30% { transform: scale(1.3); opacity: 1; box-shadow: 0 0 30px #ff0000; }
+            100% { transform: scale(1); opacity: 0.6; }
+        }
+
+        .label-text {
+            font-size: 0.65rem; color: #ef4444; letter-spacing: 0.1em; margin-top: -0.2rem; display: block;
+        }
+
+        /* フェードイン */
+        .fade-in { animation: fadeIn 1s ease-in forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 名言のスタイル */
+        .quote-text { font-family: 'Zen Kaku Gothic New', serif; }
+
+        @media (max-width: 640px) {
+            .gear-1 { width: 300px; height: 300px; }
+            .gear-2 { width: 250px; height: 250px; }
+            .gear-3 { width: 400px; height: 400px; }
+            .gear-teeth { width: 350px; height: 350px; }
         }
     </style>
 </head>
-<body class="bg-[#fdf6e3]">
-    <div id="root"></div>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
 
-    <script type="text/babel">
-        const { useState } = React;
+    <!-- 背景の歯車 -->
+    <div class="gear-container">
+        <div class="gear-ring gear-1"></div>
+        <div class="gear-ring gear-2"></div>
+        <div class="gear-ring gear-3"></div>
+        <div class="gear-teeth"></div>
+    </div>
 
-        // アイコンコンポーネント
-        const Mail = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>;
-        const Star = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
-        const CircleDollarSign = ({ className, size }) => <svg xmlns="http://www.w3.org/2000/svg" width={size || 24} height={size || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/></svg>;
-        const ShieldCheck = ({ className, size }) => <svg xmlns="http://www.w3.org/2000/svg" width={size || 24} height={size || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>;
-        const Lock = ({ className, size }) => <svg xmlns="http://www.w3.org/2000/svg" width={size || 24} height={size || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
-        const MessageSquareQuote = ({ className, size }) => <svg xmlns="http://www.w3.org/2000/svg" width={size || 24} height={size || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 12a2 2 0 0 0 2-2V8H8"/><path d="M14 12a2 2 0 0 0 2-2V8h-2"/></svg>;
-        const AlertCircle = ({ className, size }) => <svg xmlns="http://www.w3.org/2000/svg" width={size || 24} height={size || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>;
-        const MapPin = ({ className, size }) => <svg xmlns="http://www.w3.org/2000/svg" width={size || 24} height={size || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>;
+    <!-- 入力エリア -->
+    <div id="inputSection" class="w-full max-w-lg bg-black/80 backdrop-blur-md rounded-2xl border border-gray-800 shadow-2xl p-8 relative z-10 fade-in">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-600 tracking-widest mb-2">LIFE GOAL TIMER</h1>
+            <p class="text-gray-500 text-xs tracking-wider">Ver 0.3 - Record your Destiny</p>
+        </div>
 
-        const App = () => {
-            const [formData, setFormData] = useState({
-                name: '',
-                kana: '',
-                age: '',
-                bust: '',
-                waist: '',
-                hip: '',
-                ngPlay: '',
-                okPlay: '',
-                experience: 'なし',
-                contact: ''
-            });
+        <div class="space-y-5">
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1 tracking-wider">NAME</label>
+                <input type="text" id="userName" placeholder="まさる" class="w-full bg-gray-900/50 border border-gray-700 rounded px-4 py-3 text-white focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition placeholder-gray-700">
+            </div>
 
-            const handleChange = (e) => {
-                const { name, value } = e.target;
-                setFormData(prevState => ({
-                    ...prevState,
-                    [name]: value
-                }));
-            };
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1 tracking-wider">BIRTH DATE</label>
+                <input type="date" id="birthDate" class="w-full bg-gray-900/50 border border-gray-700 rounded px-4 py-3 text-white focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition">
+            </div>
 
-            const handleSubmit = (e) => {
-                e.preventDefault();
-                const subject = encodeURIComponent("モデル募集への応募");
-                const body = encodeURIComponent(`
-【お名前】 ${formData.name} (${formData.kana})
-【年齢】 ${formData.age}歳
-【スリーサイズ】 B:${formData.bust} / W:${formData.waist} / H:${formData.hip}
-【NGプレイ】 ${formData.ngPlay}
-【可能プレイ】 ${formData.okPlay}
-【撮影経験】 ${formData.experience}
-【連絡先】 ${formData.contact}
-                `);
-                window.location.href = `mailto:paters@ymail.ne.jp?subject=${subject}&body=${body}`;
-            };
-
-            return (
-                <div className="min-h-screen font-mincho overflow-x-hidden selection:bg-[#ff0055] selection:text-white pb-20">
-                    <div className="fixed inset-0 pointer-events-none opacity-10 z-0 noise-bg"></div>
-
-                    {/* HERO SECTION */}
-                    <header className="relative z-10 w-full min-h-screen flex flex-col items-center justify-center border-b-8 border-black overflow-hidden bg-[#ffce00]">
-                        <div className="absolute inset-0 z-0">
-                           <div className="w-full h-full bg-gradient-to-br from-yellow-400 to-red-500 opacity-40"></div>
-                           <div className="absolute inset-0 bg-[#ffce00] mix-blend-multiply opacity-60"></div>
-                        </div>
-
-                        <div className="relative z-20 text-center p-4">
-                            <div className="inline-block border-4 border-black bg-white p-2 mb-6 transform rotate-2 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-                                <h2 className="text-xl md:text-3xl font-black tracking-widest text-black">個人的・趣味・芸術撮影</h2>
-                            </div>
-                            
-                            <h1 className="text-6xl md:text-9xl font-black text-[#ff0055] leading-none tracking-tighter drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] mb-4">
-                                <span className="block transform -rotate-1 text-black">モデル</span>
-                                <span className="block transform rotate-2 text-[#ff0055]">募集</span>
-                                <span className="block text-4xl md:text-6xl mt-2 text-blue-800 tracking-normal font-bold">（非公開案件）</span>
-                            </h1>
-
-                            <div className="mt-10 space-y-6">
-                                <div className="animate-float">
-                                    <p className="text-xl md:text-4xl font-black bg-black text-white px-10 py-4 inline-block transform -rotate-1 shadow-2xl">
-                                        2時間～3時間で高額報酬
-                                    </p>
-                                </div>
-                                <div className="block mt-4">
-                                    <p className="text-lg md:text-2xl font-black bg-white text-black border-4 border-black px-8 py-2 inline-block transform rotate-1">
-                                        都内・千葉エリア 強化募集中
-                                    </p>
-                                </div>
-                            </div>
-                            
-                            <div className="mt-12 flex justify-center space-x-4">
-                                <Star className="text-red-600 w-10 h-10 fill-current animate-spin-slow" />
-                                <Star className="text-blue-600 w-10 h-10 fill-current animate-bounce" />
-                                <Star className="text-green-600 w-10 h-10 fill-current animate-pulse" />
-                            </div>
-                        </div>
-                    </header>
-
-                    <main className="relative z-10 max-w-4xl mx-auto px-4 py-20">
-                        
-                        {/* SAFETY DECLARATION */}
-                        <section className="mb-24">
-                            <div className="bg-white border-8 border-black p-8 md:p-12 shadow-[15px_15px_0px_0px_#ff0055] relative">
-                                <div className="absolute -top-12 left-1/2 transform -translate-x-1/2">
-                                    <div className="bg-[#ff0055] text-white p-5 rounded-full border-4 border-black shadow-lg">
-                                        <Lock size={48} />
-                                    </div>
-                                </div>
-                                <h2 className="text-3xl md:text-5xl font-black text-center mt-8 mb-10">
-                                    完全<span className="bg-yellow-300 px-2">安心・安全</span>の約束
-                                </h2>
-                                <div className="space-y-8 text-lg font-bold leading-relaxed">
-                                    <p className="text-center text-xl md:text-2xl leading-loose">
-                                        当撮影は、わたくし個人の趣味として行うものです。<br/>
-                                        <span className="text-[#ff0055] border-b-4 border-[#ff0055]">ネット流出、販売、外部公開は一切いたしません。</span>
-                                    </p>
-                                    <div className="bg-gray-100 p-8 border-l-8 border-black text-left">
-                                        <ul className="space-y-6">
-                                            <li className="flex items-start">
-                                                <ShieldCheck className="text-green-600 mr-4 flex-shrink-0 mt-1" size={28} />
-                                                <span>データは個人鑑賞用として厳重に管理されます。</span>
-                                            </li>
-                                            <li className="flex items-start">
-                                                <ShieldCheck className="text-green-600 mr-4 flex-shrink-0 mt-1" size={28} />
-                                                <span>保存データには<strong className="text-[#ff0055] text-xl">最新のAI顔変換</strong>処理を行います。顔バレの心配は100%ありません。</span>
-                                            </li>
-                                            <li className="flex items-start">
-                                                <ShieldCheck className="text-green-600 mr-4 flex-shrink-0 mt-1" size={28} />
-                                                <span>モデル様にお願いするのは<strong className="bg-yellow-200 px-1">【撮影のみ】</strong>です。</span>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-
-                        {/* TARGET & AREA */}
-                        <section className="mb-24 transform rotate-1">
-                            <div className="bg-[#1a1a1a] text-white p-10 border-4 border-[#ffce00] relative">
-                                <h2 className="text-2xl md:text-4xl font-black mb-10 text-[#ffce00] flex items-center justify-center">
-                                    <MapPin className="mr-3 text-[#ff0055]" size={40} />
-                                    募集要項
-                                </h2>
-                                
-                                <div className="grid md:grid-cols-2 gap-8">
-                                    <div className="bg-gray-800 p-8 border-2 border-gray-600 shadow-inner">
-                                        <h3 className="text-[#ff0055] font-black text-xl mb-3">強化エリア</h3>
-                                        <p className="text-3xl font-bold">都内・千葉</p>
-                                        <p className="mt-4 text-sm text-gray-400 leading-relaxed font-normal">
-                                            都内のスタジオ、または千葉エリアのシティホテル等。
-                                            あなたの移動しやすい場所で調整可能です。
-                                        </p>
-                                    </div>
-                                    <div className="bg-gray-800 p-8 border-2 border-gray-600 relative overflow-hidden">
-                                        <div className="absolute -right-10 -top-6 bg-red-600 text-white text-xs font-bold px-12 py-2 transform rotate-45">優先採用</div>
-                                        <h3 className="text-[#ff0055] font-black text-xl mb-3">募集対象</h3>
-                                        <p className="text-3xl font-bold">20歳～25歳</p>
-                                        <p className="mt-4 text-sm text-gray-400 leading-relaxed font-normal">
-                                            特にこの年代の女性を探しています。<br/>
-                                            経験・未経験は一切問いません。
-                                        </p>
-                                    </div>
-                                </div>
-                                
-                                <div className="mt-12 text-center border-t border-gray-700 pt-8">
-                                    <p className="text-xl font-bold text-[#ffce00] mb-4">こんな方に最適です</p>
-                                    <ul className="text-sm md:text-base space-y-2 opacity-90 font-normal">
-                                        <li>・急ぎでまとまった現金が必要な方</li>
-                                        <li>・好奇心旺盛で、誰にもバレずに稼ぎたい方</li>
-                                        <li>・単発ではなく、信頼できる個人と継続的に活動したい方</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </section>
-
-                        {/* REWARD */}
-                        <section className="mb-24">
-                            <div className="bg-[#fdf6e3] text-[#1a1a1a] p-10 border-8 border-black shadow-[15px_15px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden">
-                                <div className="absolute -right-10 -bottom-10 opacity-10">
-                                    <CircleDollarSign size={200} />
-                                </div>
-                                <h2 className="text-3xl md:text-5xl font-black mb-8 inline-block bg-black text-white px-4 py-1">報酬体系</h2>
-                                <div className="flex flex-col md:flex-row items-center gap-10">
-                                    <div className="flex-1">
-                                        <div className="flex items-baseline mb-4">
-                                            <span className="text-5xl md:text-7xl font-black text-[#ff0055]">2万～10万</span>
-                                            <span className="text-2xl font-bold ml-2">円 / 1回</span>
-                                        </div>
-                                        <p className="text-xl font-black mb-6 border-l-4 border-black pl-4">撮影時間は2〜3時間程度</p>
-                                        <div className="space-y-4 font-bold">
-                                            <p className="flex items-center"><Star className="mr-2 text-yellow-500 fill-current" size={18} /> 即日現金手渡し可能</p>
-                                            <p className="flex items-center"><Star className="mr-2 text-yellow-500 fill-current" size={18} /> 交通費全額支給</p>
-                                            <p className="flex items-center"><Star className="mr-2 text-yellow-500 fill-current" size={18} /> 内容により大幅アップも相談可</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-
-                        {/* Q&A */}
-                        <section className="mb-24">
-                            <div className="bg-blue-900 text-white p-10 md:p-14 border-4 border-black relative">
-                                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-[#ffce00] px-12 py-4 text-2xl font-black border-4 border-white transform -rotate-1 shadow-xl">
-                                    よくある質問
-                                </div>
-
-                                <div className="mt-12 space-y-8">
-                                    <div className="bg-white text-black p-6 rounded-none border-l-[12px] border-blue-500 shadow-lg">
-                                        <h3 className="font-black text-blue-800 text-xl mb-3 flex items-start">
-                                            <span className="bg-blue-600 text-white w-8 h-8 flex items-center justify-center rounded-full mr-3 text-sm flex-shrink-0 mt-1">Q</span>
-                                            未経験でも大丈夫ですか？
-                                        </h3>
-                                        <p className="font-bold pl-11 text-gray-700 leading-relaxed">
-                                            <span className="text-[#ff0055] font-black mr-1">A.</span> はい、全く問題ありません。むしろ初心者の方、大歓迎です。
-                                            最初はお互いのことを知るために、しっかりと面談からスタートしましょう。
-                                        </p>
-                                    </div>
-
-                                    <div className="bg-white text-black p-6 rounded-none border-l-[12px] border-blue-500 shadow-lg">
-                                        <h3 className="font-black text-blue-800 text-xl mb-3 flex items-start">
-                                            <span className="bg-blue-600 text-white w-8 h-8 flex items-center justify-center rounded-full mr-3 text-sm flex-shrink-0 mt-1">Q</span>
-                                            顔は本当に出ませんか？
-                                        </h3>
-                                        <p className="font-bold pl-11 text-gray-700 leading-relaxed">
-                                            <span className="text-[#ff0055] font-black mr-1">A.</span> 絶対に出ません。
-                                            撮影アングルでも配慮しますが、保存データには必ずAIによる顔変換を施します。
-                                            身近な人にも、ネット上にも、あなたが撮影した事実は一生わかりません。
-                                        </p>
-                                    </div>
-
-                                    <div className="bg-white text-black p-6 rounded-none border-l-[12px] border-blue-500 shadow-lg">
-                                        <h3 className="font-black text-blue-800 text-xl mb-3 flex items-start">
-                                            <span className="bg-blue-600 text-white w-8 h-8 flex items-center justify-center rounded-full mr-3 text-sm flex-shrink-0 mt-1">Q</span>
-                                            年齢制限はありますか？
-                                        </h3>
-                                        <p className="font-bold pl-11 text-gray-700 leading-relaxed">
-                                            <span className="text-[#ff0055] font-black mr-1">A.</span> 20歳以上の女性であれば、上限はありません。
-                                            現在は20代の方を強化募集しておりますが、40代・50代・60代の方も意欲があれば歓迎いたします。
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-
-                        {/* TESTIMONIALS */}
-                        <section className="mb-24 relative">
-                            <div className="absolute -top-10 -right-10 text-[#ff0055] opacity-10 transform rotate-12">
-                                <MessageSquareQuote size={200} />
-                            </div>
-                            <div className="bg-white border-4 border-black p-10 relative z-10 shadow-[12px_12px_0px_0px_#1a1a1a]">
-                                <h2 className="text-3xl md:text-4xl font-black mb-12 text-center">出演いただいた方の声</h2>
-                                
-                                <div className="grid md:grid-cols-2 gap-8 font-bold">
-                                    <div className="bg-yellow-50 p-6 border-2 border-black transform -rotate-1 shadow-md">
-                                        <p className="text-blue-700 mb-2">「とにかく安心でした」</p>
-                                        <p className="text-sm font-normal">最初は不安でしたが、とても人柄が良く、こちらの意見もしっかり聞いてくれたので安心して撮影できました。</p>
-                                    </div>
-                                    <div className="bg-pink-50 p-6 border-2 border-black transform rotate-1 shadow-md">
-                                        <p className="text-red-600 mb-2">「無理のない範囲で楽しめた」</p>
-                                        <p className="text-sm font-normal">無理な強要は一切なく、あくまで私のペースで進めてくれました。趣味の撮影という感じで楽しかったです。</p>
-                                    </div>
-                                    <div className="bg-green-50 p-6 border-2 border-black transform rotate-1 shadow-md">
-                                        <p className="text-green-700 mb-2">「即日手渡しが助かった」</p>
-                                        <p className="text-sm font-normal">支払いがピンチだったので、撮影後その場で報酬をいただけて本当に助かりました。継続してお願いしたいです。</p>
-                                    </div>
-                                    <div className="bg-gray-50 p-6 border-2 border-black transform -rotate-1 shadow-md">
-                                        <p className="text-black mb-2">「本当に顔がわからない！」</p>
-                                        <p className="text-sm font-normal">完成したデータ（顔変換後）を見せてもらいましたが、自分でも自分だとわからず、これなら安心だと思えました。</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-
-                        {/* CONTACT FORM */}
-                        <section id="contact">
-                            <div className="bg-white border-8 border-[#ff0055] p-6 md:p-12 shadow-[20px_20px_0px_0px_rgba(0,0,0,1)]">
-                                <h2 className="text-3xl md:text-5xl font-black text-center mb-4 text-black uppercase tracking-tighter">Entry Form</h2>
-                                <p className="text-center font-bold mb-10 text-gray-600">
-                                    まずは簡単なプロフィールをお送りください。<br/>
-                                    折り返しご連絡いたします。
-                                </p>
-                                
-                                <form onSubmit={handleSubmit} className="space-y-8 font-sans">
-                                    <div className="grid md:grid-cols-2 gap-8">
-                                        <div>
-                                            <label className="block text-black font-black mb-2 border-l-4 border-black pl-3">お名前 <span className="text-xs font-normal text-gray-500">(偽名可)</span></label>
-                                            <input type="text" name="name" required value={formData.name} onChange={handleChange} className="w-full bg-gray-50 border-2 border-black p-4 focus:outline-none focus:bg-[#ffce00] transition-colors" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-black font-black mb-2 border-l-4 border-black pl-3">ふりがな</label>
-                                            <input type="text" name="kana" required value={formData.kana} onChange={handleChange} className="w-full bg-gray-50 border-2 border-black p-4 focus:outline-none focus:bg-[#ffce00] transition-colors" />
-                                        </div>
-                                    </div>
-
-                                    <div className="grid md:grid-cols-2 gap-8">
-                                        <div>
-                                            <label className="block text-black font-black mb-2 border-l-4 border-black pl-3">年齢</label>
-                                            <input type="text" name="age" required value={formData.age} onChange={handleChange} className="w-full bg-gray-50 border-2 border-black p-4 focus:outline-none focus:bg-[#ffce00]" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-black font-black mb-2 border-l-4 border-black pl-3">スリーサイズ</label>
-                                            <div className="flex space-x-2">
-                                                <input type="text" name="bust" placeholder="B" value={formData.bust} onChange={handleChange} className="w-1/3 bg-gray-50 border-2 border-black p-4 focus:outline-none focus:bg-[#ffce00]" />
-                                                <input type="text" name="waist" placeholder="W" value={formData.waist} onChange={handleChange} className="w-1/3 bg-gray-50 border-2 border-black p-4 focus:outline-none focus:bg-[#ffce00]" />
-                                                <input type="text" name="hip" placeholder="H" value={formData.hip} onChange={handleChange} className="w-1/3 bg-gray-50 border-2 border-black p-4 focus:outline-none focus:bg-[#ffce00]" />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid md:grid-cols-2 gap-8">
-                                        <div>
-                                            <label className="block text-black font-black mb-2 border-l-4 border-black pl-3">NGプレイ</label>
-                                            <textarea name="ngPlay" value={formData.ngPlay} onChange={handleChange} className="w-full bg-gray-50 border-2 border-black p-4 h-32 focus:outline-none focus:bg-[#ffce00]"></textarea>
-                                        </div>
-                                        <div>
-                                            <label className="block text-black font-black mb-2 border-l-4 border-black pl-3">可能プレイ</label>
-                                            <textarea name="okPlay" value={formData.okPlay} onChange={handleChange} className="w-full bg-gray-50 border-2 border-black p-4 h-32 focus:outline-none focus:bg-[#ffce00]"></textarea>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-black font-black mb-2 border-l-4 border-black pl-3">ハメ撮影の経験</label>
-                                        <div className="flex space-x-10 mt-3 pl-2">
-                                            <label className="flex items-center space-x-3 cursor-pointer group">
-                                                <input type="radio" name="experience" value="あり" checked={formData.experience === 'あり'} onChange={handleChange} className="form-radio h-6 w-6 text-[#ff0055]" />
-                                                <span className="font-black text-lg group-hover:text-[#ff0055]">ある</span>
-                                            </label>
-                                            <label className="flex items-center space-x-3 cursor-pointer group">
-                                                <input type="radio" name="experience" value="なし" checked={formData.experience === 'なし'} onChange={handleChange} className="form-radio h-6 w-6 text-[#ff0055]" />
-                                                <span className="font-black text-lg group-hover:text-[#ff0055]">ない</span>
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-black font-black mb-2 border-l-4 border-black pl-3">連絡先 <span className="text-xs font-normal text-gray-500">(携帯 / Mail / Insta / LINE)</span></label>
-                                        <input type="text" name="contact" required value={formData.contact} onChange={handleChange} placeholder="確実につながるIDや番号を入力" className="w-full bg-gray-50 border-2 border-black p-4 focus:outline-none focus:bg-[#ffce00]" />
-                                    </div>
-
-                                    <div className="pt-8">
-                                        <button type="submit" className="w-full bg-black text-white text-2xl md:text-3xl font-black py-6 px-10 border-4 border-transparent hover:bg-[#ff0055] hover:border-black hover:text-white transition-all transform hover:-translate-y-2 hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center">
-                                            <Mail className="mr-4" /> 応募メールを作成する
-                                        </button>
-                                        <p className="text-center text-sm mt-6 text-gray-500 font-bold flex items-center justify-center">
-                                            <AlertCircle size={18} className="mr-2" /> ボタンを押すとメールソフトが起動します
-                                        </p>
-                                    </div>
-                                </form>
-                            </div>
-                        </section>
-
-                    </main>
-                    
-                    <footer className="bg-black text-white p-10 text-center border-t-8 border-[#ffce00]">
-                        <p className="text-sm opacity-60 font-mono tracking-[0.3em]">
-                        © 2026 PRIVATE ART PROJECT TOKYO. CONFIDENTIAL.
-                        </p>
-                    </footer>
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1 tracking-wider">GOAL AGE</label>
+                <div class="flex items-center">
+                    <input type="number" id="targetAge" placeholder="80" class="w-full bg-gray-900/50 border border-gray-700 rounded px-4 py-3 text-white focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition placeholder-gray-700">
+                    <span class="ml-3 text-gray-400 font-bold text-sm">歳</span>
                 </div>
-            );
+            </div>
+            
+            <!-- サウンド設定 -->
+            <div class="flex items-center justify-between bg-gray-900/30 p-3 rounded border border-gray-800">
+                <span class="text-xs text-gray-400">心音BGM (Audio)</span>
+                <label class="inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="soundToggle" class="sr-only peer">
+                    <div class="relative w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-800"></div>
+                </label>
+            </div>
+
+            <button onclick="startTimer()" class="w-full bg-gradient-to-r from-red-900 to-black hover:from-red-800 hover:to-gray-900 text-white font-bold py-4 rounded-lg shadow-lg transform active:scale-[0.98] transition duration-200 uppercase tracking-widest mt-4 border border-red-900/30">
+                INITIATE
+            </button>
+            
+            <p class="text-[10px] text-center text-gray-600 mt-2">* 入力データはお使いのブラウザに自動保存されます</p>
+        </div>
+    </div>
+
+    <!-- タイマー表示エリア (最初は非表示) -->
+    <div id="timerSection" class="hidden w-full max-w-6xl relative z-10 fade-in pb-10">
+        
+        <!-- コントロールバー (右上) -->
+        <div class="absolute top-0 right-0 flex gap-4 -mt-10 mb-4 md:mt-0 md:mb-0">
+            <button onclick="toggleFullScreen()" class="text-gray-500 hover:text-white text-xs tracking-widest uppercase transition-colors flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 4l-5-5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                FULL
+            </button>
+        </div>
+
+        <!-- メインパネル -->
+        <div class="bg-black/60 backdrop-blur-sm border border-red-900/40 rounded-3xl p-6 md:p-10 text-center warning-border relative shadow-[0_0_80px_rgba(0,0,0,0.6)]">
+            
+            <h2 class="text-gray-600 tracking-[0.4em] text-[10px] md:text-xs mb-8 uppercase">Time Remaining to Goal</h2>
+
+            <!-- コア -->
+            <div class="core-glow"></div>
+
+            <!-- カウントダウン表示 -->
+            <div class="timer-font tabular-nums text-white relative z-30 mb-10">
+                <!-- 年・日 -->
+                <div class="flex justify-center gap-8 md:gap-16 mb-6 opacity-60 hover:opacity-100 transition-opacity duration-500">
+                    <div class="text-center">
+                        <span id="years" class="text-2xl md:text-5xl font-bold block">0</span>
+                        <span class="label-text">YEARS</span>
+                    </div>
+                    <div class="text-center">
+                        <span id="days" class="text-2xl md:text-5xl font-bold block">0</span>
+                        <span class="label-text">DAYS</span>
+                    </div>
+                </div>
+
+                <!-- 時間・分・秒・コンマ -->
+                <div class="flex flex-wrap justify-center items-end gap-1 md:gap-3 text-red-500">
+                    <div class="text-center"><span id="hours" class="text-4xl md:text-8xl font-bold leading-none">00</span><span class="label-text">HOURS</span></div>
+                    <span class="text-2xl md:text-6xl self-center pb-2 md:pb-6 text-gray-700">:</span>
+                    <div class="text-center"><span id="minutes" class="text-4xl md:text-8xl font-bold leading-none">00</span><span class="label-text">MIN</span></div>
+                    <span class="text-2xl md:text-6xl self-center pb-2 md:pb-6 text-gray-700">:</span>
+                    <div class="text-center"><span id="seconds" class="text-4xl md:text-8xl font-bold leading-none">00</span><span class="label-text">SEC</span></div>
+                    <span class="text-2xl md:text-6xl self-center pb-2 md:pb-6 text-gray-700">.</span>
+                    <div class="text-center"><span id="milliseconds" class="text-5xl md:text-9xl font-bold leading-none text-red-600 w-[110px] md:w-[220px] inline-block text-left">00</span><span class="label-text text-left pl-1">MS</span></div>
+                </div>
+            </div>
+
+            <!-- メッセージ & 統計 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 text-left mt-8">
+                
+                <!-- 左側：メッセージと名言 -->
+                <div class="bg-gray-900/40 border-l-2 border-red-900/50 p-6 rounded-r-xl">
+                    <p id="mainMessage" class="text-gray-300 text-sm leading-relaxed font-medium mb-6">
+                        <!-- JSで挿入 -->
+                    </p>
+                    <div class="mt-4 pt-4 border-t border-gray-800">
+                        <p class="text-[10px] text-red-400 mb-2 tracking-widest">QUOTE OF THE MOMENT</p>
+                        <p id="randomQuote" class="text-xs md:text-sm text-gray-400 italic quote-text">
+                            <!-- JSで名言挿入 -->
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 右側：残された回数 -->
+                <div class="space-y-3">
+                    <!-- 桜 -->
+                    <div class="flex justify-between items-center bg-gray-900/40 px-4 py-3 rounded border border-gray-800/50">
+                        <span class="text-xs text-pink-400">🌸 桜を見る</span>
+                        <span class="text-lg font-bold text-white"><span id="sakuraCount">0</span> <span class="text-[10px] text-gray-500">回</span></span>
+                    </div>
+                    
+                    <!-- 食事 -->
+                    <div class="bg-gray-900/40 px-4 py-3 rounded border border-gray-800/50">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs text-orange-400">🍚 家族と食事</span>
+                            <select id="mealFrequency" onchange="updateEventCounts()" class="bg-transparent text-[10px] text-gray-500 border border-gray-800 rounded px-1 outline-none text-right">
+                                <option value="2" selected>年2回</option>
+                                <option value="12">月1回</option>
+                                <option value="52">週1回</option>
+                            </select>
+                        </div>
+                        <div class="text-right text-lg font-bold text-white"><span id="mealCount">0</span> <span class="text-[10px] text-gray-500">回</span></div>
+                    </div>
+
+                    <!-- 感謝 -->
+                    <div class="bg-gray-900/40 px-4 py-3 rounded border border-gray-800/50">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs text-blue-400">💌 感謝を伝える</span>
+                            <select id="thankFrequency" onchange="updateEventCounts()" class="bg-transparent text-[10px] text-gray-500 border border-gray-800 rounded px-1 outline-none text-right">
+                                <option value="1" selected>年1回</option>
+                                <option value="12">月1回</option>
+                            </select>
+                        </div>
+                        <div class="text-right text-lg font-bold text-white"><span id="thankCount">0</span> <span class="text-[10px] text-gray-500">回</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- フッターボタン -->
+            <div class="mt-12 flex justify-center gap-8">
+                <button onclick="resetTimer()" class="text-gray-600 hover:text-red-500 text-[10px] tracking-[0.2em] uppercase transition-colors">
+                    Edit Settings
+                </button>
+                <button onclick="downloadPage()" class="text-gray-600 hover:text-white text-[10px] tracking-[0.2em] uppercase transition-colors">
+                    Save as HTML
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let intervalId;
+        let soundIntervalId;
+        let cachedRemainingYears = 0;
+        let audioCtx;
+        let isAudioEnabled = false;
+
+        // 名言リスト
+        const quotes = [
+            "あなたの時間は限られている。だから他人の人生を生きたりして無駄に過ごしてはいけない。 - Steve Jobs",
+            "人生は短いのではない。私たちがそれを短くしているのだ。 - Seneca",
+            "過去は変えられない。未来は変えられる。今、ここにある時間だけがあなたのものだ。",
+            "一日一生。今日という日は、残りの人生の最初の日である。",
+            "失われた時は、二度と戻らない。 - Benjamin Franklin",
+            "明日死ぬかのように生きよ。永遠に生きるかのように学べ。 - Mahatma Gandhi"
+        ];
+
+        // === ページ読み込み時に保存データをロード ===
+        window.onload = function() {
+            loadSettings();
         };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        // === 設定の保存と読み込み (localStorage) ===
+        function saveSettings() {
+            const settings = {
+                name: document.getElementById('userName').value,
+                birth: document.getElementById('birthDate').value,
+                target: document.getElementById('targetAge').value,
+                mealFreq: document.getElementById('mealFrequency').value,
+                thankFreq: document.getElementById('thankFrequency').value
+            };
+            localStorage.setItem('lifeTimerSettings', JSON.stringify(settings));
+        }
+
+        function loadSettings() {
+            const saved = localStorage.getItem('lifeTimerSettings');
+            if (saved) {
+                const settings = JSON.parse(saved);
+                if(settings.name) document.getElementById('userName').value = settings.name;
+                if(settings.birth) document.getElementById('birthDate').value = settings.birth;
+                if(settings.target) document.getElementById('targetAge').value = settings.target;
+                if(settings.mealFreq) document.getElementById('mealFrequency').value = settings.mealFreq;
+                if(settings.thankFreq) document.getElementById('thankFrequency').value = settings.thankFreq;
+            }
+        }
+
+        // === 音声生成ロジック (Web Audio API) ===
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+        }
+
+        function playHeartbeat() {
+            if (!isAudioEnabled || !audioCtx) return;
+            createKick(audioCtx.currentTime);
+            createKick(audioCtx.currentTime + 0.15, 0.7); 
+        }
+
+        function createKick(startTime, gainValue = 1.0) {
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(150, startTime);
+            osc.frequency.exponentialRampToValueAtTime(0.01, startTime + 0.5);
+            gainNode.gain.setValueAtTime(gainValue, startTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.5);
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            osc.start(startTime);
+            osc.stop(startTime + 0.5);
+        }
+
+        // === タイマー開始 ===
+        function startTimer() {
+            const userName = document.getElementById('userName').value || "あなた";
+            const birthDateInput = document.getElementById('birthDate').value;
+            const targetAgeInput = document.getElementById('targetAge').value;
+            isAudioEnabled = document.getElementById('soundToggle').checked;
+
+            if (!birthDateInput || !targetAgeInput) {
+                alert("生年月日と目標年齢を入力してください。");
+                return;
+            }
+
+            // 設定を保存
+            saveSettings();
+
+            // ランダム名言を表示
+            const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+            document.getElementById('randomQuote').innerText = randomQuote;
+
+            const birthDate = new Date(birthDateInput);
+            const targetAge = parseInt(targetAgeInput);
+            const endDate = new Date(birthDate);
+            endDate.setFullYear(birthDate.getFullYear() + targetAge);
+
+            if (isAudioEnabled) {
+                initAudio();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                clearInterval(soundIntervalId);
+                soundIntervalId = setInterval(playHeartbeat, 1500);
+            }
+
+            document.getElementById('inputSection').classList.add('hidden');
+            document.getElementById('timerSection').classList.remove('hidden');
+
+            clearInterval(intervalId);
+            intervalId = setInterval(() => {
+                updateTimer(userName, birthDate, endDate);
+            }, 10);
+            
+            updateTimer(userName, birthDate, endDate);
+        }
+
+        function updateTimer(userName, birthDate, endDate) {
+            const now = new Date();
+            const timeRemaining = endDate - now;
+
+            if (timeRemaining <= 0) {
+                clearInterval(intervalId);
+                clearInterval(soundIntervalId);
+                document.getElementById('milliseconds').innerText = "00";
+                return;
+            }
+
+            const years = Math.floor(timeRemaining / (1000 * 60 * 60 * 24 * 365.25));
+            const days = Math.floor((timeRemaining % (1000 * 60 * 60 * 24 * 365.25)) / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((timeRemaining % (1000 * 60)) / 1000);
+            const milliseconds = Math.floor((timeRemaining % 1000) / 10);
+
+            document.getElementById('years').innerText = years;
+            document.getElementById('days').innerText = days;
+            document.getElementById('hours').innerText = String(hours).padStart(2, '0');
+            document.getElementById('minutes').innerText = String(minutes).padStart(2, '0');
+            document.getElementById('seconds').innerText = String(seconds).padStart(2, '0');
+            document.getElementById('milliseconds').innerText = String(milliseconds).padStart(2, '0');
+
+            cachedRemainingYears = years + (days / 365);
+            
+            if (document.getElementById('sakuraCount').innerText === "0") {
+                updateEventCounts(userName);
+            }
+        }
+
+        function updateEventCounts(optionalName) {
+            const userName = optionalName || document.getElementById('userName').value || "あなた";
+            const sakuraCount = Math.floor(cachedRemainingYears);
+            const mealFrequency = parseFloat(document.getElementById('mealFrequency').value);
+            const mealCount = Math.floor(cachedRemainingYears * mealFrequency);
+            const thankFrequency = parseFloat(document.getElementById('thankFrequency').value);
+            const thankCount = Math.floor(cachedRemainingYears * thankFrequency);
+
+            document.getElementById('sakuraCount').innerText = sakuraCount;
+            document.getElementById('mealCount').innerText = mealCount;
+            document.getElementById('thankCount').innerText = thankCount;
+
+            const msgArea = document.getElementById('mainMessage');
+            msgArea.innerHTML = `
+                <span class="text-white text-lg font-bold">${userName}</span> さん。<br>
+                残された時間の中で、私たちは何を遺せるでしょうか。<br>
+                <br>
+                <span class="text-xs text-gray-500">家族との食事回数 (予測):</span> <span class="text-red-400 font-bold">${mealCount}回</span><br>
+                <span class="text-xs text-gray-500">感謝を伝える機会 (予測):</span> <span class="text-blue-400 font-bold">${thankCount}回</span>
+            `;
+        }
+
+        function resetTimer() {
+            clearInterval(intervalId);
+            clearInterval(soundIntervalId);
+            if(audioCtx) audioCtx.suspend();
+            document.getElementById('inputSection').classList.remove('hidden');
+            document.getElementById('timerSection').classList.add('hidden');
+            document.getElementById('sakuraCount').innerText = "0";
+        }
+
+        function downloadPage() {
+            const htmlContent = document.documentElement.outerHTML;
+            const blob = new Blob([htmlContent], { type: "text/html" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "index.html"; // Netlify用に最初からindex.htmlにする
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // === 全画面表示機能 ===
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    alert(`Error attempting to enable full-screen mode: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
     </script>
 </body>
 </html>
